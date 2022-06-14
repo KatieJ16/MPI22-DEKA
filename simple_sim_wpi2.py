@@ -8,11 +8,11 @@ Created on Mon Jun 13 16:26:21 2022
 import numpy as np
 import matplotlib.pyplot as plt
 
-lam_list = np.arange(0,1.1, .1) #the list of lambdas to test
-to_plot = False
+lam_list = [0.2]#np.arange(0,1.1, .1) #the list of lambdas to test
+to_plot = True
 
 
-for num in range(10): #we are repeating everything 10 times
+for num in range(1): #we are repeating everything 10 times
     #get initial start spot
     step_n_list = list()
     x = np.random.uniform(0.5,1, 2)
