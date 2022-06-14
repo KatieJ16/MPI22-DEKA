@@ -26,7 +26,7 @@ print("a = ", a)
 
 #setting some parameters
 epsilon = 0.01
-n_steps = 100
+n_steps = 200
 dt = 0.1
 
 #loop over every timestep
@@ -45,8 +45,8 @@ for i in range(n_steps):
     plt.plot(x[0], x[1], '.')
     
     #when to hit breaks
-    if np.linalg.norm(x) < 1/2:
-        a = x / np.linalg.norm(x)
+    # if np.linalg.norm(x) < 1/2:
+    #     a = x / np.linalg.norm(x)
         
     #check if we are close enough to origin then stop
     if np.linalg.norm(x) < epsilon:
@@ -65,6 +65,9 @@ radius = 0.5
 x = radius * np.cos( angle ) 
 y = radius * np.sin( angle ) 
 
-plt.plot( x, y, 'k' ) 
+# plt.plot( x, y, 'k' ) 
+
+plt.title("Path when lambda = 1")
+plt.savefig("lambda1.pdf")
 
     
