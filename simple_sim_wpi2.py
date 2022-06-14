@@ -20,7 +20,7 @@ if np.linalg.norm(v) > 1.0:
 print("v = ", v)
 plt.plot(x[0], x[1], '*')
 plt.plot(0,0,'k*')
-plt.arrow(x[0], x[1], v[0], v[1])#, arrowprops=dict(arrowstyle="->"))
+plt.arrow(x[0], x[1], v[0], v[1])
 
 a = -x / np.linalg.norm(x)
 
@@ -54,27 +54,17 @@ for i in range(1, n_steps):
     x_list.append(np.linalg.norm(x))
     v_list.append(np.linalg.norm(v))
     a_list.append(np.linalg.norm(a))
-    print("v = ", v)
-    print("x = ", x)
-    print("np.dot(-x, v) -np.linalg.norm(x)  * np.linalg.norm(v) = ", np.dot(-x, v) -np.linalg.norm(x)  * np.linalg.norm(v))
-    # if np.abs(np.dot(-x, v) -np.linalg.norm(x)  * np.linalg.norm(v))< epsilon:
-    #     a = -v/np.linalg.norm(v)
-    #     print("BREAK")
-    #     break
-    #acceleration always goes to the origin
-    # a = -x / np.linalg.norm(x)
     
-    a = (v+x)#(x - x0 - v*(dt))/((dt)**2) * 2
+    #get the direction of a
+    a = (v+x)
     
+    #get the magnitude of a
     print("a = ", a)
     a = -a/np.linalg.norm(a)
-    if np.linalg.norm(x) < 1/2:
+    if np.linalg.norm(x) < 1/2: #hit the breaks
         a = a/np.linalg.norm(a)
     plt.plot(x[0], x[1], '.')
     
-    # #when to hit breaks
-    # if np.linalg.norm(x) < 1/2:
-    #     a = x / np.linalg.norm(x)
         
     #check if we are close enough to origin then stop
     if np.linalg.norm(x) < epsilon:
@@ -98,9 +88,10 @@ y = radius * np.sin( angle )
 plt.plot( x, y, 'k' ) 
 
 plt.show()
-plt.semilogy(x_list)
-plt.plot(v_list)
-plt.plot(a_list)
+plt.semilogy(x_list, label = "x")
+plt.plot(v_list, label = "v")
+plt.plot(a_list, label = "a")
+plt.legend()
 
 
     
