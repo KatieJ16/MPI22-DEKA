@@ -130,8 +130,8 @@ def niter(x0,v0,lam,vmax,dt):
     # Keep track of iterations.
     i = 1
     
-    #loop over every timestep.  Stop only when x and v are small.
-    while((np.linalg.norm(x) > rstop) or (np.linalg.norm(v) > vstop) and i<n_steps):
+    #Loop over every time step.  If we haven't done the maximum number of steps (i<nsteps, so that's with an AND), then we continue as long as one of the stopping conditions isn't satisfied (r>rs OR v>vs).
+    while(((np.linalg.norm(x) > rstop) or (np.linalg.norm(v) > vstop)) and i<n_steps):
         #update v
         
         x,v,a = advance(x,v,lam,amax,vmax,dt)

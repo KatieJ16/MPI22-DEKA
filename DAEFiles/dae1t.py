@@ -3,13 +3,17 @@
 Created on Mon Jun 13 16:26:21 2022
 
 @author: David A. Edwards adapted from Katherine Johnston's code.
+
+Last revised on 6/16/22
 """
 
-# Code dae1t.  This code computes a single trajectory for a single value of lambda.   Moreover, it stores the iterates for x, v, and a.
+# Code dae1t.  This code computes a single trajectory for a single value of lambda.   Moreover, it stores the iterates for x, v, and a, as well as how aligned x and v are.
 
 # Import the pacakges we need.
 import numpy as np
 import matplotlib.pyplot as plt
+# This library gives trig functions.
+import math
 
     
 # Just like in Pascal, functions have to be defined ahead of any script.  So we just define a main function which is the script, and call it at the end.
@@ -17,11 +21,12 @@ import matplotlib.pyplot as plt
 def main():
     
     # Variables:
+        # alignlist: list of alignments of x and v
+        # alval: alignment value
         # amax: maximum acceleration of robot
         # dt: time step
         # epsilon: target radius
         # i: step variable
-        # lam_list: list of lambda values to test
         # n_steps: number of steps to run code
         # num: looping variabe for simulation
         # rstop: tolerance for radius
@@ -67,6 +72,9 @@ def main():
     # This line will never execute as long as vmax^2>2v0max^2.
     if np.linalg.norm(v0) > vmax:
         v0 = v0/np.linalg.norm(v0) * vmax
+        
+        # x0 = np.array([678.15415613,-817.65612229])
+        # v0 = np.array([2.34036646,-0.21327138])
     
     lam = 0.55
         
@@ -82,11 +90,12 @@ def main():
     x_list = list()
     v_list = list()
     a_list = list()
+    alignlist = list()
     
     # Keep track of iterations.
     i = 1
     
-    #loop over every timestep.  Stop only when x and v are small.
+    #Loop over every time step.  If we haven't done the maximum number of steps (i<nsteps, so that's with an AND), then we continue as long as one of the stopping conditions isn't satisfied (r>rs OR v>vs).
     while(((np.linalg.norm(x) > rstop) or (np.linalg.norm(v) > vstop)) and i<n_steps):
         #update v
         
@@ -100,11 +109,14 @@ def main():
         v_list.append(np.linalg.norm(v))
         a_list.append(np.linalg.norm(a))
         
+        # Next we track how aligned x and v are
+        alval = np.dot(x,v)/np.linalg.norm(x)/np.linalg.norm(v)
+        alignlist.append(alval)
+        
         # If we are plotting, go ahead and add the point now.
         
         if to_plot:
             plt.plot(x[0], x[1], '.')
-        
     
     #record number of timesteps
     print(i)
@@ -132,6 +144,14 @@ def main():
         # IMPORTANT: In order for the plot to display when you are also saving it, the commands must be in this order:
         plt.savefig('xvplot.pdf')
         plt.show()
+        
+        # Start the alignment figure
+        plt.plot(alignlist)
+        plt.xlabel('Iterate')
+        plt.ylabel('Alignment')
+        plt.title("Alignment vs. iterate")
+        plt.savefig('align.pdf')
+        plt.show()
 
 
 def advance(x,v,lam,amax,vmax):
@@ -155,8 +175,11 @@ def advance(x,v,lam,amax,vmax):
     
 # Calculate the new acceleration direction, given the value of lambda.
     a = ((1-lam)*v+lam*x)
-# Then set its magnitude to amax.  Note there is no deceleration radius anymore.
-    a = -a/np.linalg.norm(a) * amax
+    # Then set its magnitude to amax.  Note there is no deceleration radius anymore.
+        a = -a/np.linalg.norm(a) * amax
+# # Calculate the new acceleration direction, given the value of lambda.
+#     a = np.array([math.cos(lam),math.sin(lam)])*amax
+
     # IMPORTANT: It is possible that this will have to be adjusted so that it sets to a smaller value at the end, when x is near 0 and v is near 0 so it doesn't oscillate.
     
     #update v
