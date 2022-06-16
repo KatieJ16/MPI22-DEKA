@@ -34,9 +34,6 @@ def main():
         # x0: initial position of robot
         # x0max: maximum CARTESIAN COORDINATE of initial condition
 
-
-    # This generates the range of lambdas.  Here the first argument is the starting value, the third argument is the step, and the second argument is the "stopping" value, which is NOT included in the range.  So this is [0,0.1,...,1].
-    # lam_list = np.arange(0,1.1, .1) #the list of lambdas to test
     # This tells us whether to plot the solutions or not.
     to_plot = True
     # to_plot = False
@@ -61,8 +58,6 @@ def main():
         
     # np.random.seed(0)
     
-    #get initial start spot
-    step_n_list = list()
     # Create a random vector with two positions with magnitude less than x0max.
     # x0 = np.random.uniform(-x0max,x0max, 2)
     x0 = np.random.uniform(-x0max,x0max, 2)
@@ -73,7 +68,7 @@ def main():
     if np.linalg.norm(v0) > vmax:
         v0 = v0/np.linalg.norm(v0) * vmax
     
-    lam = 0.7
+    lam = 0.55
         
     x = x0
     v = v0
@@ -82,7 +77,8 @@ def main():
     if to_plot:
         plt.plot(x[0], x[1], '*')
         plt.plot(0,0,'k*')
-        plt.arrow(x[0], x[1], v[0], v[1])
+        # Plot the initial velocity.  Has to be larger because of the scale.
+        plt.arrow(x[0], x[1], 20*v[0], 20*v[1])
     x_list = list()
     v_list = list()
     a_list = list()
@@ -91,18 +87,20 @@ def main():
     i = 1
     
     #loop over every timestep.  Stop only when x and v are small.
-    while((np.linalg.norm(x) > rstop) or (np.linalg.norm(v) > vstop) and i<n_steps):
+    while(((np.linalg.norm(x) > rstop) or (np.linalg.norm(v) > vstop)) and i<n_steps):
         #update v
         
         x,v,a = advance(x,v,lam,amax,vmax)
         
         i = i + 1
         
-        # If we are plotting, add the new values of the norm to the list.
+        # Add the new values of the norm to the list.
 
         x_list.append(np.linalg.norm(x))
         v_list.append(np.linalg.norm(v))
         a_list.append(np.linalg.norm(a))
+        
+        # If we are plotting, go ahead and add the point now.
         
         if to_plot:
             plt.plot(x[0], x[1], '.')
@@ -110,37 +108,31 @@ def main():
     
     #record number of timesteps
     print(i)
-    step_n_list.append(i)
-        
-    # plt.xlim([-.1,.1])
-    # plt.ylim([-.1, .1])
        
     if to_plot:
         # make the origin star on top
         plt.plot(0,0,'k*')
         
-        # #plot circle 
-        # angle = np.linspace( 0 , 2 * np.pi , 150 ) 
+        # Give the iterate plot a title and labels
+        plt.title("Path with $\lambda=$" +str(lam))
+        plt.xlabel('$x$')
+        plt.ylabel('$y$')
         
-        # radius = 0.5
-        # x = radius * np.cos( angle ) 
-        # y = radius * np.sin( angle ) 
-        
-        # plt.plot( x, y, 'k' ) 
-        
-        plt.title("Path with lambda = " +str(lam))
-        
+        # IMPORTANT: In order for the plot to display when you are also saving it, the commands must be in this order:
+        plt.savefig('iterplot.pdf')
         plt.show()
-        plt.semilogy(x_list, label = "x")
-        plt.plot(v_list, label = "v")
+       
+        # Start the x and v figure.
+        plt.semilogy(x_list, label = "$r$")
+        plt.plot(v_list, label = "$v$")
         # plt.plot(a_list, label = "a")
+        plt.xlabel('Iterate')
         plt.legend()
+        plt.title("Radius and velocity vs. iterate")
+        # IMPORTANT: In order for the plot to display when you are also saving it, the commands must be in this order:
+        plt.savefig('xvplot.pdf')
         plt.show()
-    
-    # plt.semilogy(lam_list, step_n_list)
-    # plt.xlabel("lambda")
-    # plt.ylabel("timesteps to origin (Max at 10^4)")
-    # plt.title("Timesteps to origin for 10 different initial conditions")
+
 
 def advance(x,v,lam,amax,vmax):
 # This function determines the new values of x and v given the previous values.  It just does one time step.
