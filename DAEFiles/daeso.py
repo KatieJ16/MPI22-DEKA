@@ -4,7 +4,7 @@ Created on Mon Jun 13 16:26:21 2022
 
 @author: David A. Edwards adapted from Katherine Johnston's code.
 
-Last Revised: 6/15/22.
+Last Revised: 6/16/22.
 """
 
 # Code daesopt.  This code generates a stochastic optimization solution for a particular initial condition and penalty function.
@@ -45,10 +45,6 @@ def main():
     if np.linalg.norm(v0) > vmax:
         v0 = v0/np.linalg.norm(v0) * vmax
     
-    # # This is a case that doesn't converge.  Remember that we have to use nparray to make it a vector.
-    # x0 = np.array([678.15415613,-817.65612229])
-    # v0 = np.array([2.34036646,-0.21327138])
-    
     for flag in range(3):
     # Recall that this does 0,1,2, so we have to add 1
         pfac = plotgen(x0,v0,flag+1)
@@ -69,22 +65,24 @@ def plotgen(x0,v0,flag):
 # Internal variables:
     # bestfiter: best value of f in an iteration
     # besti: best value of i in an iteration
-    # bestlist: list of lambdas chosen
+    # bestlist: list of F values
     # bestv: best value of v in an iteration
     # bestx: best value of x in an iteration
     # dt: time step
     # exitflag: this stays at 0 if the code terminates without switching to convergence mode (hasn't been happening)
     # f: value of cost function
     # ftol: best value of f to date
-# lam_list: list of lambda values to test
-# lamgrid: number of lambda points to test
-# numplot: looping variable for simulation
-# numic: number of simulations to do
-# step_n_list: list of iterations for each lambda
-# to_plot: logical variable for if we are producing plots
-    # vmax: maximum velocity of robot
-# x0max: maximum CARTESIAN COORDINATE of initial condition
-# xz: stored value of x0
+    # lam_list: list of lambda values to test
+    # lamgrid: number of lambda points to test
+    # n_steps: number of steps to run code
+    # numplot: looping variable for simulation
+    # numic: number of simulations to do
+    # step_n_list: list of iterations for each lambda
+    # times: array of times of each iteration
+    # to_plot: logical variable for if we are producing plots
+        # vmax: maximum velocity of robot
+    # x0max: maximum CARTESIAN COORDINATE of initial condition
+    # xz: stored value of x0
 
 # How many lambdas to test.
     lamgrid = 10
@@ -96,6 +94,8 @@ def plotgen(x0,v0,flag):
     
     # Define time step.
     dt = 0.1
+    # Number of steps to run simulation
+    n_steps = 10
     # maximum CARTESIAN COORDINATE of initial condition
     x0max = 1000
     # Maximum velocity of robot (m/s)
@@ -103,7 +103,7 @@ def plotgen(x0,v0,flag):
     
     xz = x0
     
-    #Create a list where we will store the best lambda for each t*.
+    #Create a list where we will store the best F for each t*
     bestlist = list()
 
     # plot the start
@@ -129,7 +129,7 @@ def plotgen(x0,v0,flag):
         bestfiter = 2*x0max
         for lam in lam_list:
         
-            f,x,v,i = seestep(x0,v0,lam,vmax,dt,flag)
+            f,x,v,i = seestep(x0,v0,lam,vmax,dt,flag,n_steps)
                         
             # If f in this iteration is better than the best in the interval:
             if f<bestfiter:
@@ -139,16 +139,12 @@ def plotgen(x0,v0,flag):
                 bestv = v
                 besti = i
         
-        # Add the best value of lambda.  Also add the number of iterations.
-        bestlist.append(bestlam)
+        # Add the best value of F to the list.
+        bestlist.append(bestfiter)
+        # Add the number of iterations used to our running total.
         titer = titer + besti
-        
-        # If the bset for this interval is worse than when we started:
-        if (bestfiter >= ftol):
-            titer = titer + niter(x0,v0,lam,vmax,dt,to_plot)
-            exitflag = 1
-            print("Exiting due to f not decreasing.")
-            break
+    
+        print(bestfiter,x,v)
         
         ftol = bestfiter
         
@@ -163,14 +159,16 @@ def plotgen(x0,v0,flag):
 
     # Convert our list of iterates into the performance factor
     titer = dt * titer * vmax/(np.linalg.norm(xz))
-    # print(bestlist)
+
+    # Convert iterates to time steps.  (This is actually a bit of a kludge, because the last one may not be the full 10 iterates, but it's within a second.)
+    times = np.array(range(len(bestlist)))*dt*n_steps
        
     if to_plot:
         # make the origin star on top
         plt.plot(0,0,'k*')
         
         # Give the iterate plot a title and labels.  Note that the variables have to be contained in parentheses because we have more than one.
-        plt.title("Path, $F$=Choice %d, Exitflag=%d, $p$=%.2f" % (flag,exitflag,titer))
+        plt.title("Path, $F$=(4.%d), $p$=%.2f" % (flag,titer))
         plt.xlabel('$x$')
         plt.ylabel('$y$')
         
@@ -179,75 +177,16 @@ def plotgen(x0,v0,flag):
         plt.show()
         
         # Start the alignment figure
-        plt.plot(bestlist)
-        plt.xlabel('Iterate')
-        plt.ylabel('$\lambda$')
-        plt.title("$\lambda$ vs. iterate")
-        plt.savefig('lamlist.pdf')
+        plt.semilogy(times,bestlist)
+        plt.xlabel('$t$ (s)')
+        plt.ylabel('$F$')
+        plt.title("$F$ vs. $t$")
+        plt.savefig('fplot%d.pdf' %flag)
         plt.show()
         
     return titer
 
-
-def niter(x0,v0,lam,vmax,dt,to_plot):
-# This function calculates the number of iterations needed to get to the origin from x0 and v0 given lambda.
-
-# Called by: main
-# Calls: advance.
-
-# Input variables:
-    # lam: value of lambda
-    # vmax: maximum velocity of robot
-    # v0: initial velocity of robot
-    # x0: initial position of robot
-
-
-# Internal variables:
-    # a: acceleration vector
-    # amax: maximum acceleration of robot
-    # epsilon: target radius
-    # i: step variable
-    # lam_list: list of lambda values to test
-    # n_steps: number of steps to run code
-    # num: looping variabe for simulation
-    # rstop: tolerance for radius
-    # v: velocity vector of robot
-
-    # vstop: tolerance for velocity
-    # x: position vector of robot
-
-
-    # Maximum acceleration of robot (m/s^2)
-    amax = 2.0
-    #target radius
-    rstop = 1
-    #target velocity
-    vstop = 0.01
-    # Number of steps to run simulation
-    n_steps = 10000
-    
-    x = x0
-    v = v0
-    
-    # Keep track of iterations.
-    i = 1
-    
-    #Loop over every time step.  If we haven't done the maximum number of steps (i<nsteps, so that's with an AND), then we continue as long as one of the stopping conditions isn't satisfied (r>rs OR v>vs).
-    while(((np.linalg.norm(x) > rstop) or (np.linalg.norm(v) > vstop)) and i<n_steps):
-        #update v
-        
-        x,v,a = advance(x,v,lam,amax,vmax,dt)
-        
-        i = i + 1
-        if to_plot:
-            plt.plot(x[0], x[1], '.')
-    
-    #record number of timesteps
-    print(i)
-    
-    return i
-
-def seestep(x0,v0,lam,vmax,dt,flag):
+def seestep(x0,v0,lam,vmax,dt,flag,n_steps):
 # This function returns the penalty function and the corresponding x and v for a given value of lambda and 10 time steps.
 
 # Called by: main
@@ -255,25 +194,25 @@ def seestep(x0,v0,lam,vmax,dt,flag):
 
 # Input variables:
     # lam: value of lambda
+    # n_steps: number of steps to run code
     # vmax: maximum velocity of robot
     # v0: initial velocity of robot
     # x0: initial position of robot
-
 
 # Internal variables:
     # a: acceleration vector
     # amax: maximum acceleration of robot
     # epsilon: target radius
-    # i: step variable
     # lam_list: list of lambda values to test
-    # n_steps: number of steps to run code
     # num: looping variabe for simulation
     # rstop: tolerance for radius
-    # v: velocity vector of robot
-
     # vstop: tolerance for velocity
+    
+# Output variables:
+    # f: penalty value
+    # i: step variable
+    # v: velocity vector of robot
     # x: position vector of robot
-
 
     # Maximum acceleration of robot (m/s^2)
     amax = 2.0
@@ -281,22 +220,10 @@ def seestep(x0,v0,lam,vmax,dt,flag):
     rstop = 1
     #target velocity
     vstop = 0.01
-    # Number of steps to run simulation
-    n_steps = 10
-    
-    # if np.linalg.norm(x0) < rstop:
-    #     n_steps = 1
-        
-    # print(n_steps)
+
     
     x = x0
     v = v0
-    
-    # Check for debugging purposes
-    tt=0
-    # if (np.linalg.norm(x))<2:
-    #     tt=1
-    #     print("lambda=",lam)
     
     # Keep track of iterations.
     i = 1
@@ -314,11 +241,6 @@ def seestep(x0,v0,lam,vmax,dt,flag):
     
     # Compute the penalty
     f = penalty(np.linalg.norm(x),np.linalg.norm(v),rstop,flag)
-    
-    if tt == 1:
-        print("f=",f)
-    
-    # print(i)
     
     # If we have converged because we have reached the stopping condition, set f to 0:
     if ((np.linalg.norm(x) < rstop) and (np.linalg.norm(v) < vstop)):

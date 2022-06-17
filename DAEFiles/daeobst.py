@@ -51,17 +51,17 @@ def main():
     x0 = np.array([100,500])
     v0 = np.array([2.34036646,-0.21327138])
     
-    for flag in range(1):
+    for flag in [2,10]:
     # Recall that this does 0,1,2, so we have to add 1
-        pfac = plotgen(x0,v0,flag+1)
-        print("flag=%d, p=%.2f" % (flag+1,pfac))
+        pfac = plotgen(x0,v0,flag)
+        print("exponent=%d, p=%.2f" % (flag,pfac))
 
 
-def plotgen(x0,v0,flag):
+def plotgen(x0,v0,expval):
 # This function generates a plot for a particular choice of flag
 
 # Input variables:
-    # flag: variable specifying cost function
+    # expval: value of exponent
     # v0: initial velocity
     # x0: initial position
 
@@ -71,15 +71,15 @@ def plotgen(x0,v0,flag):
 # Internal variables:
     # bestfiter: best value of f in an iteration
     # besti: best value of i in an iteration
-    # bestlist: list of lambdas chosen
+    # bestlist: list of F values
     # bestv: best value of v in an iteration
     # bestx: best value of x in an iteration
     # dt: time step
-    # exitflag: this stays at 0 if the code terminates without switching to convergence mode (hasn't been happening)
     # f: value of cost function
     # ftol: best value of f to date
 # lam_list: list of lambda values to test
 # lamgrid: number of lambda points to test
+    # n_steps: number of steps to run code
 # numplot: looping variable for simulation
 # numic: number of simulations to do
 # step_n_list: list of iterations for each lambda
@@ -102,10 +102,13 @@ def plotgen(x0,v0,flag):
     x0max = 1000
     # Maximum velocity of robot (m/s)
     vmax = 4.0
-    
+
+    # Number of steps to run simulation
+    n_steps = 10
+        
     xz = x0
     
-    #Create a list where we will store the best lambda for each t*.
+    #Create a list where we will store the best F for each t*
     bestlist = list()
 
     # plot the start
@@ -117,11 +120,8 @@ def plotgen(x0,v0,flag):
 
     # Set maximum tolerance
     ftol = 2*x0max
-    
     # Initialize iteration count
     titer = 0
-    # Initialize exitflag variable
-    exitflag = 0
     
     # Do this loop until you get to the origin.
     while ftol>0:
@@ -131,26 +131,19 @@ def plotgen(x0,v0,flag):
         bestfiter = 2*x0max
         for lam in lam_list:
         
-            f,x,v,i = seestep(x0,v0,lam,vmax,dt,flag)
+            f,x,v,i = seestep(x0,v0,lam,vmax,dt,expval,n_steps)
                         
             # If f in this iteration is better than the best in the interval:
             if f<bestfiter:
                 bestfiter = f
-                bestlam = lam
                 bestx = x
                 bestv = v
                 besti = i
         
-        # Add the best value of lambda.  Also add the number of iterations.
-        bestlist.append(bestlam)
+        # Add the best value of F to the list.
+        bestlist.append(bestfiter)
+        # Add the number of iterations used to our running total.
         titer = titer + besti
-        
-        # If the bset for this interval is worse than when we started:
-        # if (bestfiter >= ftol):
-        #     titer = titer + niter(x0,v0,lam,vmax,dt,to_plot)
-        #     exitflag = 1
-        #     print("Exiting due to f not decreasing.")
-        #     break
         
         ftol = bestfiter
         print(ftol,bestx)
@@ -166,7 +159,9 @@ def plotgen(x0,v0,flag):
 
     # Convert our list of iterates into the performance factor
     titer = dt * titer * vmax/(np.linalg.norm(xz))
-    # print(bestlist)
+
+    # Convert iterates to time steps
+    times = np.array(range(len(bestlist)))*dt*n_steps
        
     if to_plot:
         # make the origin star on top
@@ -175,26 +170,24 @@ def plotgen(x0,v0,flag):
         plt.plot([-100,150],[200,200])
         
         # Give the iterate plot a title and labels.  Note that the variables have to be contained in parentheses because we have more than one.
-        plt.title("Path with Barrier")
+        plt.title("Path with Barrier, p=%.2f, Exponent = %d" % (titer,expval))
         plt.xlabel('$x$')
         plt.ylabel('$y$')
         
         # IMPORTANT: In order for the plot to display when you are also saving it, the commands must be in this order:
-        plt.savefig('barrier.pdf')
+        plt.savefig('bar%d.pdf' % expval)
         plt.show()
         
         # Start the alignment figure
-        plt.plot(bestlist)
-        plt.xlabel('Iterate')
-        plt.ylabel('$\lambda$')
-        plt.title("$\lambda$ vs. iterate")
-        plt.savefig('lambar.pdf')
+        plt.semilogy(times,bestlist)
+        plt.xlabel('$t$ (s)')
+        plt.ylabel('$F$')
+        plt.title("$F$ vs. $t$, Exponent = %d" % expval)
+        plt.savefig('fbar%d.pdf' % expval)
         plt.show()
         
     return titer
 
-
-def niter(x0,v0,lam,vmax,dt,to_plot):
 # This function calculates the number of iterations needed to get to the origin from x0 and v0 given lambda.
 
 # Called by: main
@@ -248,15 +241,17 @@ def niter(x0,v0,lam,vmax,dt,to_plot):
     print(i)
     
     return i
-
-def seestep(x0,v0,lam,vmax,dt,flag):
+def seestep(x0,v0,lam,vmax,dt,expval,n_steps):
 # This function returns the penalty function and the corresponding x and v for a given value of lambda and 10 time steps.
 
 # Called by: main
 # Calls: advance, penalty.
 
 # Input variables:
+    # dt: time step
+    # expval: value of exponent
     # lam: value of lambda
+    # n_steps: number of steps to run code
     # vmax: maximum velocity of robot
     # v0: initial velocity of robot
     # x0: initial position of robot
@@ -268,7 +263,6 @@ def seestep(x0,v0,lam,vmax,dt,flag):
     # epsilon: target radius
     # i: step variable
     # lam_list: list of lambda values to test
-    # n_steps: number of steps to run code
     # num: looping variabe for simulation
     # rstop: tolerance for radius
     # v: velocity vector of robot
@@ -283,22 +277,9 @@ def seestep(x0,v0,lam,vmax,dt,flag):
     rstop = 1
     #target velocity
     vstop = 0.01
-    # Number of steps to run simulation
-    n_steps = 10
-    
-    # if np.linalg.norm(x0) < rstop:
-    #     n_steps = 1
-        
-    # print(n_steps)
-    
+
     x = x0
     v = v0
-    
-    # Check for debugging purposes
-    tt=0
-    # if (np.linalg.norm(x))<2:
-    #     tt=1
-    #     print("lambda=",lam)
     
     # Keep track of iterations.
     i = 1
@@ -312,12 +293,8 @@ def seestep(x0,v0,lam,vmax,dt,flag):
         i = i + 1
     
     # Compute the penalty
-    f = penalty(x)
-    
-    if tt == 1:
-        print("f=",f)
-    
-    # print(i)
+    f = penalty(x,np.linalg.norm(v),rstop,expval)
+
     
     # If we have converged because we have reached the stopping condition, set f to 0:
     if ((np.linalg.norm(x) < rstop) and (np.linalg.norm(v) < vstop)):
@@ -325,13 +302,16 @@ def seestep(x0,v0,lam,vmax,dt,flag):
     
     return f,x,v,i
 
-def penalty(x):
+def penalty(x,vel,rstop,expval):
 # This code computes the local penalty.
 
 # Called by: seestep.
 # Calls: none.
 
 # Input variables:
+    # expval: exponent
+    # rstop: stopping radius
+    # vel: speed
     # x: position
     
 # Internal variables
@@ -341,7 +321,10 @@ def penalty(x):
     # f: penalty function
     
 # Here the penalty function includes the individual x and y.  Recall that the indices have to be shifted.
-    f = np.linalg.norm(x) + (max(0,x[0]+100)/abs(x[1]-200))**2
+    r = np.linalg.norm(x)
+    f = r + (max(0,x[0]+100)/abs(x[1]-200))**expval
+    if (r<rstop):
+        f = vel
     
     return f
 
@@ -355,34 +338,29 @@ def advance(x,v,lam,amax,vmax,dt):
     # amax: maximum acceleration
     # dt: time step
     # lam: lambda
-    # v: velocity at previous time step
     # vmax: maximum speed
-    # x: position at previous time step
     
 # Internal variables:
-    # a: acceleration vector
+    # alval: alignment factor
+    # wvec: fudge vector orthogonal to v
     
-    # We introduce a kludge.  If x and v are parallel,
-# Calculate the new acceleration direction, given the value of lambda.
-    a = ((1-lam)*v+lam*x)
-    # Next we track how aligned x and v are
+# Output variables:
+    # a: acceleration vector
+    # v: velocity at previous time step
+    # x: position at previous time step
+    
+    # First we calculate the alignment factror
     alval = abs(np.dot(x,v)/np.linalg.norm(x)/np.linalg.norm(v))
-    # If this is near 1, then we introduce an orthogonal complement:
+    # If this is near 1, then we introduce a new vector wvec orthogonal to v to provide an alternative direction to accelerate.  Note that w didn't work very well; it might be some sort of command?
     if (alval>0.9):
         wvec = np.array([-v[1],v[0]])
-        a = ((1-lam)*wvec+lam*x)
-        
-    # if tt==1:
-    #     print("a=",a, end=",")
+    else:
+        wvec = v
+
+# Calculate the new acceleration direction, given the value of lambda.
+    a = ((1-lam)*wvec+lam*x)
 # Then set its magnitude to amax.  Note there is no deceleration radius anymore.
     a = -a/np.linalg.norm(a) * amax
-    # if np.linalg.norm(x) < vmax**2/2/amax:
-    #     a=-a
-    # if tt==1:
-    #     print("norma=",a)
-    #     print("xold=",x,", vold=",v)
-    # IMPORTANT: It is possible that this will have to be adjusted so that it sets to a smaller value at the end, when x is near 0 and v is near 0 so it doesn't oscillate.
-    
     
     #update v
     v = v + a * dt

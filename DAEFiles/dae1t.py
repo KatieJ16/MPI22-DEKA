@@ -30,6 +30,8 @@ def main():
         # n_steps: number of steps to run code
         # num: looping variabe for simulation
         # rstop: tolerance for radius
+        # times: array of times of each iteration
+        # to_plot: logical variable for plotting
         # v: velocity vector of robot
         # vmax: maximum velocity of robot
         # v0: initial velocity of robot
@@ -57,6 +59,8 @@ def main():
     vstop = 0.01
     # Number of steps to run simulation
     n_steps = 10000
+    # Time step
+    dt = 0.1
     
     
     # For testing purposes, seed the random number generator so we always get the same things:
@@ -72,11 +76,8 @@ def main():
     # This line will never execute as long as vmax^2>2v0max^2.
     if np.linalg.norm(v0) > vmax:
         v0 = v0/np.linalg.norm(v0) * vmax
-        
-        # x0 = np.array([678.15415613,-817.65612229])
-        # v0 = np.array([2.34036646,-0.21327138])
     
-    lam = 0.55
+    lam = 1.0
         
     x = x0
     v = v0
@@ -99,7 +100,7 @@ def main():
     while(((np.linalg.norm(x) > rstop) or (np.linalg.norm(v) > vstop)) and i<n_steps):
         #update v
         
-        x,v,a = advance(x,v,lam,amax,vmax)
+        x,v,a = advance(x,v,lam,amax,vmax,dt)
         
         i = i + 1
         
@@ -120,6 +121,9 @@ def main():
     
     #record number of timesteps
     print(i)
+    
+    # Convert iterates to time steps
+    times = np.array(range(len(x_list)))*dt
        
     if to_plot:
         # make the origin star on top
@@ -135,26 +139,26 @@ def main():
         plt.show()
        
         # Start the x and v figure.
-        plt.semilogy(x_list, label = "$r$")
-        plt.plot(v_list, label = "$v$")
+        plt.semilogy(times,x_list, label = "$r$")
+        plt.plot(times,v_list, label = "$v$")
         # plt.plot(a_list, label = "a")
-        plt.xlabel('Iterate')
+        plt.xlabel('$t$ (s)')
         plt.legend()
-        plt.title("Radius and velocity vs. iterate")
+        plt.title("Radius and speed vs. $t$")
         # IMPORTANT: In order for the plot to display when you are also saving it, the commands must be in this order:
         plt.savefig('xvplot.pdf')
         plt.show()
         
         # Start the alignment figure
-        plt.plot(alignlist)
-        plt.xlabel('Iterate')
+        plt.plot(times,alignlist)
+        plt.xlabel('$t$ (s)')
         plt.ylabel('Alignment')
-        plt.title("Alignment vs. iterate")
+        plt.title("Alignment vs. $t$")
         plt.savefig('align.pdf')
         plt.show()
 
 
-def advance(x,v,lam,amax,vmax):
+def advance(x,v,lam,amax,vmax,dt):
 # This function determines the new values of x and v given the previous values.  It just does one time step.
 
 # Called by: main
@@ -162,6 +166,7 @@ def advance(x,v,lam,amax,vmax):
 
 # Input variables:
     # amax: maximum acceleration
+    # dt: time step
     # lam: lambda
     # v: velocity at previous time step
     # vmax: maximum speed
@@ -170,13 +175,10 @@ def advance(x,v,lam,amax,vmax):
 # Internal variables:
     # rd: decleration distance
     
-    # time step
-    dt = 0.1
-    
 # Calculate the new acceleration direction, given the value of lambda.
     a = ((1-lam)*v+lam*x)
     # Then set its magnitude to amax.  Note there is no deceleration radius anymore.
-        a = -a/np.linalg.norm(a) * amax
+    a = -a/np.linalg.norm(a) * amax
 # # Calculate the new acceleration direction, given the value of lambda.
 #     a = np.array([math.cos(lam),math.sin(lam)])*amax
 
